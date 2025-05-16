@@ -174,11 +174,11 @@
     function drawHUD() {
       ctx.font = "14px Arial";
       ctx.fillStyle = "#333";
-      ctx.fillText("점수: " + score, 8, 20);
-      ctx.fillText("생명: " + lives, 8, 40);
-      ctx.fillText("레벨: " + level, 8, 60);
+      ctx.fillText("점수: " + score, 8, canvas.height - 50);
+      ctx.fillText("생명: " + lives, 8, canvas.height - 30);
+      ctx.fillText("레벨: " + level, 8, canvas.height - 10);
       const highScore = Math.max(score, localStorage.getItem("brickHighScore") || 0);
-      ctx.fillText("최고 점수: " + highScore, canvas.width - 140, 20);
+      ctx.fillText("최고 점수: " + highScore, canvas.width - 160, canvas.height - 50);
     }
 
     function gameOver() {
