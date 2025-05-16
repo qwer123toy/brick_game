@@ -38,7 +38,12 @@
   </style>
 </head>
 <body style="font-family: 'Press Start 2P', cursive; background-color: #222; color: white;">
-  <canvas id="gameCanvas" width="480" height="320"></canvas>
+  <div id="overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;
+      background:rgba(0,0,0,0.8);color:white;z-index:20;justify-content:center;align-items:center;flex-direction:column;font-size:20px;">
+      <div id="resultText">Game Over</div>
+      <button onclick="restartGame()" style="margin-top:20px;padding:10px 20px;font-size:18px;">다시 시작</button>
+    </div>
+    <canvas id="gameCanvas" width="480" height="320"></canvas>
   <button id="restartBtn" onclick="restartGame()">다시 하기</button>
 
   <!-- 효과음 & 배경음 -->
@@ -187,6 +192,9 @@
     }
 
     function gameOver() {
+  document.getElementById("overlay").style.display = "flex";
+  document.getElementById("resultText").innerText = "게임 오버! 점수: " + score;
+
       isGameOver = true;
       localStorage.setItem("brickHighScore", Math.max(score, localStorage.getItem("brickHighScore") || 0));
       restartBtn.style.display = "block";
@@ -197,8 +205,20 @@
       document.location.reload();
     }
 
-    function draw() {
-      if (isGameOver) return;
+    let isPaused = false;
+document.addEventListener('keydown', e => {
+  if (e.key === 'p' || e.key === 'P') {
+    isPaused = !isPaused;
+    if (isPaused) {
+      bgm.pause();
+    } else {
+      bgm.play();
+      draw();
+    }
+  }
+});
+function draw() {
+      if (isGameOver || isPaused) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBricks();
       drawBall();
