@@ -23,7 +23,7 @@
       bottom: 20px;
       left: 20px;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 20px;
       z-index: 100;
     }
@@ -58,7 +58,7 @@
 
     function resizeCanvas() {
       canvas.width = Math.min(window.innerWidth, 480);
-      canvas.height = Math.min(window.innerHeight * 0.55, 320);
+      canvas.height = Math.min(window.innerHeight * 0.75, 400);
     }
 
     window.addEventListener("resize", resizeCanvas);
@@ -186,8 +186,8 @@
         y = canvas.height - paddleHeight - ballRadius;
       }
 
-      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 5;
-      else if (leftPressed && paddleX > 0) paddleX -= 5;
+      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 8;
+      else if (leftPressed && paddleX > 0) paddleX -= 8;
 
       requestAnimationFrame(draw);
     }
