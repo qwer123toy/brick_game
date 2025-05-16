@@ -1,219 +1,113 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <meta charset="UTF-8" />
-  <title>확장 벽돌깨기 게임</title>
+  <title>모바일 완전 확장 벽돌깨기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
-      overflow: hidden;
+      background: #222;
+      font-family: 'Press Start 2P', cursive;
+      color: white;
     }
     canvas {
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      background: linear-gradient(to bottom, #dfe9f3, #ffffff);
-      background: #f0f0f0;
       display: block;
       margin: 0 auto;
-      border: 2px solid #333;
+      background: linear-gradient(to bottom, #dfe9f3, #ffffff);
       touch-action: none;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
-    #restartBtn {
-      font-family: 'Press Start 2P', cursive;
-      text-shadow: 1px 1px 2px black;
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 12px 24px;
-      font-size: 18px;
-      background-color: #0095DD;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      z-index: 10;
-    }
-  
     #controls {
       position: fixed;
-      bottom: 20px;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 12px;
-      z-index: 50;
+      gap: 20px;
+      z-index: 100;
     }
     #controls button {
-      font-size: 24px;
-      padding: 10px 16px;
-      border-radius: 10px;
+      font-size: 28px;
+      padding: 20px 24px;
+      border-radius: 12px;
       background: #0095DD;
       color: white;
       border: none;
-      font-family: 'Press Start 2P', cursive;
     }
-</style>
+  </style>
 </head>
-<body style="font-family: 'Press Start 2P', cursive; background-color: #222; color: white;">
-  <div id="overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;
-      background:rgba(0,0,0,0.8);color:white;z-index:20;justify-content:center;align-items:center;flex-direction:column;font-size:20px;">
-      <div id="resultText">Game Over</div>
-      <button onclick="restartGame()" style="margin-top:20px;padding:10px 20px;font-size:18px;">다시 시작</button>
-    </div>
-    <canvas id="gameCanvas"></canvas>
-<script>
-  function resizeCanvas() {
-    const canvas = document.getElementById("gameCanvas");
-    const w = Math.min(window.innerWidth, 480);
-    const h = Math.min(window.innerHeight * 0.75, 360);
-    canvas.width = w;
-    canvas.height = h;
-  }
-  window.addEventListener('resize', resizeCanvas);
-  window.addEventListener('orientationchange', resizeCanvas);
-  resizeCanvas();
-</script>
+<body>
+  <canvas id="gameCanvas"></canvas>
   <div id="controls">
-    <button onclick="moveLeft()">◀️</button>
-    <button onclick="launchBall()">⏺️</button>
-    <button onclick="moveRight()">▶️</button>
+    <button onclick="moveLeft()">⬅️</button>
+    <button onclick="launchBall()">🟢</button>
+    <button onclick="moveRight()">➡️</button>
   </div>
-  <button id="restartBtn" onclick="restartGame()">다시 하기</button>
-
-  <!-- 효과음 & 배경음 -->
-  <audio id="hitSound" src="https://cdn.pixabay.com/audio/2021/08/04/audio_44e66b2b90.mp3" preload="auto"></audio>
-  <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/03/31/audio_d1e06dcbf1.mp3" preload="auto" loop></audio>
-
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    const restartBtn = document.getElementById("restartBtn");
-    const hitSound = document.getElementById("hitSound");
-    const bgm = document.getElementById("bgm");
 
-    let x, y, dx, dy, paddleX, score, lives, level, ballSpeed, isGameOver, isBallHeld = true;
-let combo = 0;
-let balls = [];
-let hardBricks = {};
-let items = [];
+    function resizeCanvas() {
+      canvas.width = Math.min(window.innerWidth, 480);
+      canvas.height = Math.min(window.innerHeight * 0.75, 400);
+    }
 
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    resizeCanvas();
+
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 3;
+    let dy = -3;
     const ballRadius = 10;
     const paddleHeight = 10;
     const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+    let isBallHeld = true;
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let bossHP = 5;
+    let gameTime = 60;
+    let combo = 0;
+
     const brickRowCount = 3;
     const brickColumnCount = 5;
     const brickWidth = 75;
     const brickHeight = 20;
     const brickPadding = 10;
-    const brickOffsetTop = 30;
+    const brickOffsetTop = 40;
     const brickOffsetLeft = 30;
+    const bricks = [];
+    const items = [];
 
-    let rightPressed = false;
-    let leftPressed = false;
-    let bricks = [];
-
-    function initGame() {
-      x = canvas.width / 2;
-      y = canvas.height - 30;
-      dx = 2;
-      dy = -2;
-      paddleX = (canvas.width - paddleWidth) / 2;
-      score = 0;
-      lives = 3;
-      level = 1;
-      ballSpeed = 3;
-      isGameOver = false;
-      createBricks();
-items = [];
-combo = 0;
-
-      bgm.volume = 0.3;
-      bgm.play();
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1, color: getRandomColor() };
+      }
     }
 
-    function createBricks() {
-      bricks = [];
-      for (let c = 0; c < brickColumnCount; c++) {
-        bricks[c] = [];
-        for (let r = 0; r < brickRowCount; r++) {
-          const color = "#" + Math.floor(Math.random()*16777215).toString(16);
-          bricks[c][r] = { x: 0, y: 0, status: 1, color: color };
-        }
-      }
+    function getRandomColor() {
+      return "#" + Math.floor(Math.random()*16777215).toString(16);
     }
 
     document.addEventListener("keydown", e => {
-      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
-      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
-    });
-    document.addEventListener("keyup", e => {
-      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
-      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+      if (e.key === "ArrowLeft") paddleX -= 20;
+      if (e.key === "ArrowRight") paddleX += 20;
+      if (e.code === "Space") launchBall();
     });
 
-    canvas.addEventListener("touchmove", e => {
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const touchX = touch.clientX - rect.left;
-      paddleX = touchX - paddleWidth / 2;
-    });
-
-    function spawnItem(x, y) {
-  items.push({ x: x, y: y, type: Math.random() < 0.5 ? 'life' : 'multi' });
-}
-function drawItems() {
-  items.forEach((item, index) => {
-    ctx.beginPath();
-    ctx.arc(item.x, item.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = item.type === 'life' ? 'lime' : 'gold';
-    ctx.fill();
-    ctx.closePath();
-    item.y += 1;
-
-    if (item.y > canvas.height - paddleHeight &&
-        item.x > paddleX && item.x < paddleX + paddleWidth) {
-      if (item.type === 'life') lives++;
-      if (item.type === 'multi') balls.push({ x: x, y: y, dx: -dx, dy: -dy });
-      items.splice(index, 1);
+    function moveLeft() {
+      paddleX -= 20;
     }
-  });
-}
-function collisionDetection() {
-      for (let c = 0; c < brickColumnCount; c++) {
-        for (let r = 0; r < brickRowCount; r++) {
-          const b = bricks[c][r];
-          if (b.status === 1) {
-            if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-              dy = -dy;
-              b.status = 0;
-              combo++;
-score += 1 + Math.floor(combo / 3);
-              hitSound.currentTime = 0;
-              hitSound.play();
-              if (combo > 0) combo = 0;
-if (score >= brickRowCount * brickColumnCount * level) {
-                levelUp();
-              }
-            }
-          }
-        }
-      }
+    function moveRight() {
+      paddleX += 20;
     }
-
-    function levelUp() {
-      level++;
-      ballSpeed += 1;
-      dx = (dx > 0 ? 1 : -1) * ballSpeed;
-      dy = (dy > 0 ? 1 : -1) * ballSpeed;
-      createBricks();
-items = [];
-combo = 0;
-
-      x = canvas.width / 2;
-      y = canvas.height - 30;
-      paddleX = (canvas.width - paddleWidth) / 2;
+    function launchBall() {
+      if (isBallHeld) isBallHeld = false;
     }
 
     function drawBall() {
@@ -235,14 +129,15 @@ combo = 0;
     function drawBricks() {
       for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
-          if (bricks[c][r].status === 1) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
             const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
             const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-            bricks[c][r].x = brickX;
-            bricks[c][r].y = brickY;
+            b.x = brickX;
+            b.y = brickY;
             ctx.beginPath();
             ctx.rect(brickX, brickY, brickWidth, brickHeight);
-            ctx.fillStyle = bricks[c][r].color;
+            ctx.fillStyle = b.color;
             ctx.fill();
             ctx.closePath();
           }
@@ -251,101 +146,129 @@ combo = 0;
     }
 
     function drawHUD() {
-      ctx.font = "12px 'Press Start 2P', cursive";
-      ctx.fillStyle = "#333";
-      ctx.fillText("점수: " + score, 8, canvas.height - 50);
-      ctx.fillText("생명: " + lives, 8, canvas.height - 30);
+      ctx.font = "10px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#000";
+      ctx.fillText("점수: " + score, 8, canvas.height - 40);
+      ctx.fillText("생명: " + lives, 8, canvas.height - 25);
       ctx.fillText("레벨: " + level, 8, canvas.height - 10);
-      const highScore = Math.max(score, localStorage.getItem("brickHighScore") || 0);
-      ctx.fillText("최고 점수: " + highScore, canvas.width - 160, canvas.height - 50);
+      ctx.fillText("시간: " + gameTime, canvas.width - 100, canvas.height - 40);
+      ctx.fillText("콤보: " + combo, canvas.width - 100, canvas.height - 25);
     }
 
-    function gameOver() {
-  document.getElementById("overlay").style.display = "flex";
-  document.getElementById("resultText").innerText = "게임 오버! 점수: " + score;
-
-      isGameOver = true;
-      localStorage.setItem("brickHighScore", Math.max(score, localStorage.getItem("brickHighScore") || 0));
-      restartBtn.style.display = "block";
-      bgm.pause();
+    function drawBossBlock() {
+      const bossX = canvas.width / 2 - 30;
+      const bossY = 10;
+      ctx.beginPath();
+      ctx.rect(bossX, bossY, 60, 20);
+      ctx.fillStyle = bossHP > 0 ? "crimson" : "gray";
+      ctx.fill();
+      ctx.closePath();
+      ctx.fillStyle = "#fff";
+      ctx.font = "10px Arial";
+      ctx.fillText("BOSS: " + bossHP, bossX + 4, bossY + 14);
     }
 
-    function restartGame() {
-      document.location.reload();
+    function hitBoss() {
+      const bossX = canvas.width / 2 - 30;
+      const bossY = 10;
+      if (x > bossX && x < bossX + 60 && y > bossY && y < bossY + 20) {
+        dy = -dy;
+        if (bossHP > 0) bossHP--;
+      }
     }
 
-    let isPaused = false;
-document.addEventListener('keydown', e => {
-  if (e.key === 'p' || e.key === 'P') {
-    isPaused = !isPaused;
-    if (isPaused) {
-      bgm.pause();
-    } else {
-      bgm.play();
-      draw();
+    function drawItems() {
+      items.forEach((item, index) => {
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = item.type === 'life' ? 'lime' : 'gold';
+        ctx.fill();
+        ctx.closePath();
+        item.y += 1;
+
+        if (
+          item.y > canvas.height - paddleHeight &&
+          item.x > paddleX && item.x < paddleX + paddleWidth
+        ) {
+          if (item.type === 'life') lives++;
+          if (item.type === 'multi') score += 10;
+          items.splice(index, 1);
+        }
+      });
     }
-  }
-});
-function moveLeft() {
-  paddleX -= 20;
-}
-function moveRight() {
-  paddleX += 20;
-}
-function launchBall() {
-  if (isBallHeld) isBallHeld = false;
-}
-function draw() {
-      if (isGameOver || isPaused) return;
+
+    function spawnItem(x, y) {
+      if (Math.random() < 0.3) {
+        items.push({ x, y, type: Math.random() < 0.5 ? 'life' : 'multi' });
+      }
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
+              dy = -dy;
+              b.status = 0;
+              combo++;
+              score += 1 + Math.floor(combo / 3);
+              spawnItem(b.x, b.y);
+            }
+          }
+        }
+      }
+    }
+
+    function startTimer() {
+      setInterval(() => {
+        gameTime--;
+        if (gameTime <= 0) {
+          alert("시간 초과!");
+          document.location.reload();
+        }
+      }, 1000);
+    }
+
+    function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBricks();
       drawBall();
       drawPaddle();
-      drawHUD(); drawTimer(); drawBossBlock();
-      collisionDetection(); hitBoss();
+      drawHUD();
+      drawBossBlock();
       drawItems();
-
-      if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
-      if (y + dy < ballRadius) dy = -dy;
-      else if (y + dy > canvas.height - ballRadius) {
-        if (x > paddleX && x < paddleX + paddleWidth && !isBallHeld) {
-          dy = -dy;
-        } else {
-          lives--;
-          if (lives <= 0) {
-            gameOver();
-            return;
-          } else {
-            x = paddleX + paddleWidth / 2;
-            y = canvas.height - paddleHeight - ballRadius;
-            isBallHeld = true;
-            dx = (Math.random() > 0.5 ? 1 : -1) * ballSpeed;
-            dy = -ballSpeed;
-            paddleX = (canvas.width - paddleWidth) / 2;
-          }
-        }
-      }
-
-      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 7;
-      else if (leftPressed && paddleX > 0) paddleX -= 7;
+      collisionDetection();
+      hitBoss();
 
       if (!isBallHeld) {
+        if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
+        if (y + dy < ballRadius) dy = -dy;
+        else if (y + dy > canvas.height - ballRadius) {
+          if (x > paddleX && x < paddleX + paddleWidth) {
+            dy = -dy;
+          } else {
+            lives--;
+            if (lives <= 0) {
+              alert("게임 오버!");
+              document.location.reload();
+              return;
+            } else {
+              isBallHeld = true;
+            }
+          }
+        }
         x += dx;
         y += dy;
       } else {
         x = paddleX + paddleWidth / 2;
         y = canvas.height - paddleHeight - ballRadius;
       }
+
       requestAnimationFrame(draw);
     }
 
-    initGame(); startTimer();
-document.addEventListener("keydown", e => {
-  if ((e.key === " " || e.code === "Space") && isBallHeld) {
-    isBallHeld = false;
-  }
-});
-
+    startTimer();
     draw();
   </script>
 </body>
