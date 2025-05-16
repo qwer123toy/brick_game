@@ -87,7 +87,7 @@ let items = [];
       score = 0;
       lives = 3;
       level = 1;
-      ballSpeed = 2;
+      ballSpeed = 3;
       isGameOver = false;
       createBricks();
 items = [];
@@ -256,8 +256,8 @@ function draw() {
       drawBricks();
       drawBall();
       drawPaddle();
-      drawHUD();
-      collisionDetection();
+      drawHUD(); drawTimer(); drawBossBlock();
+      collisionDetection(); hitBoss();
       drawItems();
 
       if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
@@ -294,7 +294,7 @@ function draw() {
       requestAnimationFrame(draw);
     }
 
-    initGame();
+    initGame(); startTimer();
 document.addEventListener("keydown", e => {
   if ((e.key === " " || e.code === "Space") && isBallHeld) {
     isBallHeld = false;
