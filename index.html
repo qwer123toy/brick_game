@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>확장형 모바일 벽돌깨기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      font-family: 'Press Start 2P', cursive;
+      color: white;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: linear-gradient(to bottom, #dfe9f3, #ffffff);
+      touch-action: none;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    #leftControls {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      z-index: 100;
+    }
+    #rightControls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+    #leftControls button, #rightControls button {
+      font-size: 32px;
+      padding: 24px 32px;
+      border-radius: 16px;
+      background: #0095DD;
+      color: white;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="leftControls">
+    <button id="leftBtn" ontouchstart="leftPressed = true" ontouchend="leftPressed = false" onclick="leftPressed = true; setTimeout(() => leftPressed = false, 100);">⬅️</button>
+    <button id="rightBtn" ontouchstart="rightPressed = true" ontouchend="rightPressed = false" onclick="rightPressed = true; setTimeout(() => rightPressed = false, 100);">➡️</button>
+  </div>
+  <div id="rightControls">
+    <button id="launchBtn" ontouchstart="launchBall()" onclick="launchBall()">🟢</button>
+  </div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    function resizeCanvas() {
+      canvas.width = Math.min(window.innerWidth, 480);
+      canvas.height = Math.min(window.innerHeight * 0.75, 400);
+    }
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    resizeCanvas();
+
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 3;
+    let dy = -3;
+    const ballRadius = 10;
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+    let isBallHeld = true;
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let leftPressed = false;
+    let rightPressed = false;
+    let combo = 0;
+    let items = [];
+    let bossHP = 5;
+    let gameTime = 60;
+
+    const bricks = [];
+    const brickRowCount = 3;
+    const brickColumnCount = 5;
+    const brickWidth = 75;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 30;
+
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") leftPressed = true;
+      if (e.key === "ArrowRight") rightPressed = true;
+      if (e.code === "Space") launchBall();
+    });
+    document.addEventListener("keyup", e => {
+      if (e.key === "ArrowLeft") leftPressed = false;
+      if (e.key === "ArrowRight") rightPressed = false;
+    });
+
+    function launchBall() {
+      if (isBallHeld) isBallHeld = false;
+    }
+
+    function drawHUD() {
+      ctx.font = "10px 'Press Start 2P', cursive";
+      ctx.fillStyle = "#000";
+      ctx.fillText("점수: " + score, 8, canvas.height - 40);
+      ctx.fillText("생명: " + lives, 8, canvas.height - 25);
+      ctx.fillText("레벨: " + level, 8, canvas.height - 10);
+      ctx.fillText("시간: " + gameTime, canvas.width - 100, canvas.height - 40);
+      ctx.fillText("콤보: " + combo, canvas.width - 100, canvas.height - 25);
+    }
+
+    function drawBossBlock() {
+      const bossX = canvas.width / 2 - 30;
+      const bossY = 10;
+      ctx.beginPath();
+      ctx.rect(bossX, bossY, 60, 20);
+      ctx.fillStyle = bossHP > 0 ? "crimson" : "gray";
+      ctx.fill();
+      ctx.closePath();
+      ctx.fillStyle = "#fff";
+      ctx.font = "10px Arial";
+      ctx.fillText("BOSS: " + bossHP, bossX + 4, bossY + 14);
+    }
+
+    function hitBoss() {
+      const bossX = canvas.width / 2 - 30;
+      const bossY = 10;
+      if (x > bossX && x < bossX + 60 && y > bossY && y < bossY + 20) {
+        dy = -dy;
+        if (bossHP > 0) bossHP--;
+      }
+    }
+
+    function drawItems() {
+      items.forEach((item, index) => {
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = item.type === 'life' ? 'lime' : 'gold';
+        ctx.fill();
+        ctx.closePath();
+        item.y += 1;
+        if (item.y > canvas.height - paddleHeight && item.x > paddleX && item.x < paddleX + paddleWidth) {
+          if (item.type === 'life') lives++;
+          if (item.type === 'multi') score += 10;
+          items.splice(index, 1);
+        }
+      });
+    }
+
+    function spawnItem(x, y) {
+      if (Math.random() < 0.3) {
+        items.push({ x, y, type: Math.random() < 0.5 ? 'life' : 'multi' });
+      }
+    }
+
+    function startTimer() {
+      setInterval(() => {
+        gameTime--;
+        if (gameTime <= 0) {
+          alert("시간 초과!");
+          document.location.reload();
+        }
+      }, 1000);
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+            const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+            b.x = brickX;
+            b.y = brickY;
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#ff5733";
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
+              dy = -dy;
+              b.status = 0;
+              combo++;
+              score += 1 + Math.floor(combo / 3);
+              spawnItem(b.x, b.y);
+            }
+          }
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      drawHUD();
+      drawBossBlock();
+      drawItems();
+      collisionDetection();
+      hitBoss();
+
+      if (!isBallHeld) {
+        if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
+        if (y + dy < ballRadius) dy = -dy;
+        else if (y + dy > canvas.height - ballRadius) {
+          if (x > paddleX && x < paddleX + paddleWidth) {
+            dy = -dy;
+          } else {
+            lives--;
+            if (lives <= 0) {
+              alert("게임 오버!");
+              document.location.reload();
+              return;
+            } else {
+              isBallHeld = true;
+            }
+          }
+        }
+        x += dx;
+        y += dy;
+      } else {
+        x = paddleX + paddleWidth / 2;
+        y = canvas.height - paddleHeight - ballRadius;
+      }
+
+      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 8;
+      else if (leftPressed && paddleX > 0) paddleX -= 8;
+
+      requestAnimationFrame(draw);
+    }
+
+    startTimer();
+    draw();
+  </script>
+</body>
+</html>
