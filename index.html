@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <meta charset="UTF-8" />
   <title>확장 벽돌깨기 게임</title>
   <style>
@@ -9,6 +10,8 @@
       overflow: hidden;
     }
     canvas {
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      background: linear-gradient(to bottom, #dfe9f3, #ffffff);
       background: #f0f0f0;
       display: block;
       margin: 0 auto;
@@ -16,6 +19,8 @@
       touch-action: none;
     }
     #restartBtn {
+      font-family: 'Press Start 2P', cursive;
+      text-shadow: 1px 1px 2px black;
       display: none;
       position: absolute;
       top: 50%;
@@ -32,7 +37,7 @@
     }
   </style>
 </head>
-<body>
+<body style="font-family: 'Press Start 2P', cursive; background-color: #222; color: white;">
   <canvas id="gameCanvas" width="480" height="320"></canvas>
   <button id="restartBtn" onclick="restartGame()">다시 하기</button>
 
@@ -172,7 +177,7 @@
     }
 
     function drawHUD() {
-      ctx.font = "14px Arial";
+      ctx.font = "12px 'Press Start 2P', cursive";
       ctx.fillStyle = "#333";
       ctx.fillText("점수: " + score, 8, canvas.height - 50);
       ctx.fillText("생명: " + lives, 8, canvas.height - 30);
