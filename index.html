@@ -40,9 +40,9 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   <div id="controls">
-    <button onclick="moveLeft()">⬅️</button>
-    <button onclick="launchBall()">🟢</button>
-    <button onclick="moveRight()">➡️</button>
+    <button ontouchstart="leftPressed = true" ontouchend="leftPressed = false">⬅️</button>
+    <button ontouchstart="launchBall()">🟢</button>
+    <button ontouchstart="rightPressed = true" ontouchend="rightPressed = false">➡️</button>
   </div>
   <script>
     const canvas = document.getElementById("gameCanvas");
@@ -50,7 +50,7 @@
 
     function resizeCanvas() {
       canvas.width = Math.min(window.innerWidth, 480);
-      canvas.height = Math.min(window.innerHeight * 0.75, 400);
+      canvas.height = Math.min(window.innerHeight * 0.55, 320);
     }
 
     window.addEventListener("resize", resizeCanvas);
@@ -100,12 +100,8 @@
       if (e.code === "Space") launchBall();
     });
 
-    function moveLeft() {
-      paddleX -= 20;
-    }
-    function moveRight() {
-      paddleX += 20;
-    }
+    let leftPressed = false;
+    let rightPressed = false;
     function launchBall() {
       if (isBallHeld) isBallHeld = false;
     }
@@ -232,6 +228,7 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = true;
       drawBricks();
       drawBall();
       drawPaddle();
@@ -265,7 +262,7 @@
         y = canvas.height - paddleHeight - ballRadius;
       }
 
-      requestAnimationFrame(draw);
+      setTimeout(() => requestAnimationFrame(draw), 1000 / 60);
     }
 
     startTimer();
