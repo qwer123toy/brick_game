@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>확장 벽돌깨기 게임</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      background: #f0f0f0;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #333;
+      touch-action: none;
+    }
+    #restartBtn {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #0095DD;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="480" height="320"></canvas>
+  <button id="restartBtn" onclick="restartGame()">다시 하기</button>
+
+  <!-- 효과음 & 배경음 -->
+  <audio id="hitSound" src="https://cdn.pixabay.com/audio/2021/08/04/audio_44e66b2b90.mp3" preload="auto"></audio>
+  <audio id="bgm" src="https://cdn.pixabay.com/audio/2023/03/31/audio_d1e06dcbf1.mp3" preload="auto" loop></audio>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
+    const hitSound = document.getElementById("hitSound");
+    const bgm = document.getElementById("bgm");
+
+    let x, y, dx, dy, paddleX, score, lives, level, ballSpeed, isGameOver;
+    const ballRadius = 10;
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    const brickRowCount = 3;
+    const brickColumnCount = 5;
+    const brickWidth = 75;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 30;
+
+    let rightPressed = false;
+    let leftPressed = false;
+    let bricks = [];
+
+    function initGame() {
+      x = canvas.width / 2;
+      y = canvas.height - 30;
+      dx = 2;
+      dy = -2;
+      paddleX = (canvas.width - paddleWidth) / 2;
+      score = 0;
+      lives = 3;
+      level = 1;
+      ballSpeed = 2;
+      isGameOver = false;
+      createBricks();
+      bgm.volume = 0.3;
+      bgm.play();
+    }
+
+    function createBricks() {
+      bricks = [];
+      for (let c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < brickRowCount; r++) {
+          const color = "#" + Math.floor(Math.random()*16777215).toString(16);
+          bricks[c][r] = { x: 0, y: 0, status: 1, color: color };
+        }
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+    });
+    document.addEventListener("keyup", e => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+    });
+
+    canvas.addEventListener("touchmove", e => {
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const touchX = touch.clientX - rect.left;
+      paddleX = touchX - paddleWidth / 2;
+    });
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
+              dy = -dy;
+              b.status = 0;
+              score++;
+              hitSound.currentTime = 0;
+              hitSound.play();
+              if (score === brickRowCount * brickColumnCount) {
+                levelUp();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function levelUp() {
+      level++;
+      ballSpeed += 1;
+      dx = (dx > 0 ? 1 : -1) * ballSpeed;
+      dy = (dy > 0 ? 1 : -1) * ballSpeed;
+      createBricks();
+      x = canvas.width / 2;
+      y = canvas.height - 30;
+      paddleX = (canvas.width - paddleWidth) / 2;
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) {
+            const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+            const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = bricks[c][r].color;
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function drawHUD() {
+      ctx.font = "14px Arial";
+      ctx.fillStyle = "#333";
+      ctx.fillText("점수: " + score, 8, 20);
+      ctx.fillText("생명: " + lives, 8, 40);
+      ctx.fillText("레벨: " + level, 8, 60);
+      const highScore = Math.max(score, localStorage.getItem("brickHighScore") || 0);
+      ctx.fillText("최고 점수: " + highScore, canvas.width - 140, 20);
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      localStorage.setItem("brickHighScore", Math.max(score, localStorage.getItem("brickHighScore") || 0));
+      restartBtn.style.display = "block";
+      bgm.pause();
+    }
+
+    function restartGame() {
+      document.location.reload();
+    }
+
+    function draw() {
+      if (isGameOver) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      drawHUD();
+      collisionDetection();
+
+      if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
+      if (y + dy < ballRadius) dy = -dy;
+      else if (y + dy > canvas.height - ballRadius) {
+        if (x > paddleX && x < paddleX + paddleWidth) {
+          dy = -dy;
+        } else {
+          lives--;
+          if (lives <= 0) {
+            gameOver();
+            return;
+          } else {
+            x = canvas.width / 2;
+            y = canvas.height - 30;
+            dx = (Math.random() > 0.5 ? 1 : -1) * ballSpeed;
+            dy = -ballSpeed;
+            paddleX = (canvas.width - paddleWidth) / 2;
+          }
+        }
+      }
+
+      if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += 7;
+      else if (leftPressed && paddleX > 0) paddleX -= 7;
+
+      x += dx;
+      y += dy;
+      requestAnimationFrame(draw);
+    }
+
+    initGame();
+    draw();
+  </script>
+</body>
+</html>
